@@ -2,20 +2,20 @@
 A script that demonstrate running PageRank algorithm with the given graph
 '''
 
-from pprint import pprint
+from pprint import pprint as pp
 from PageRank import PageRank
 
 def constructGraph():
     def addNode(a):
-        if a['name'] not in graph:
-            graph[a['name']] = a
+        if a['id'] not in graph:
+            graph[a['id']] = a
 
     def addEdge(a,b):
         '''
         a -> b
         '''
-        a['edgeOut'].append(b['name'])
-        b['edgeIn'].append(a['name'])
+        a['edgeOut'].append(b['id'])
+        b['edgeIn'].append(a['id'])
 
     graph = {}
 
@@ -78,7 +78,7 @@ def constructGraph():
     addEdge(nodeE,nodeC)
 
     return graph
-
+    
 p = PageRank(constructGraph())
 p.runPageRank()
-pprint(p.graph)
+pp(p.graph)

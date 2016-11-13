@@ -31,7 +31,32 @@ def index():
 def get_data():
     import json
     with open ('facebook_graph.json','r') as f:
-        return jsonify(json.load(f))
+        given_dic = (json.load(f))
+
+        #Track down the constructed relationship
+        track = set()
+        for node in given_dic:
+            src_name = given_dic[node]['name']
+            targets = given_dic[node]['edgeOut']
+
+            #Construct the list of tuples, to indicate that src is pointing at
+            for target in targets:
+                track.add((src_name,given_dic[target]['name']))
+
+            #Construct the list of tuples, to indicate that taget is pointing at src
+            targets = given_dic[node]['edgeIn']
+            for target in targets:
+                track.add((given_dic[target]['name'],src_name))
+
+        result_list_dic = []
+        for eachRelationship in track:
+            result_list_dic.append({'source':eachRelationship[0],'target':eachRelationship[1],"type":"suit"})
+        result = {}
+        result['data'] = result_list_dic
+        #Suppose to return the data for
+        # result = {'data':[{'source': "Samsung", 'target': "Apple", "type": "suit"},{'source': "Samsung", 'target': "Apple", "type": "suit"}]}
+
+        return jsonify(result)
 
 
 

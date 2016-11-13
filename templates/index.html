@@ -42,17 +42,18 @@ text {
 d3.json("/data", function(data) {
   console.log(data);
 
-var links = [
-  {source: "Josh Hurt", target: "Amazon", type: "licensing"},
-  {source: "Josh Hurt", target: "HTC", type: "licensing"},
-  {source: "Samsung", target: "Apple", type: "suit"},
-  {source: "Motorola", target: "Apple", type: "suit"},
-  {source: "Nokia", target: "Apple", type: "resolved"},
-  {source: "HTC", target: "Apple", type: "suit"},
-  {source: "Kodak", target: "Apple", type: "suit"},
-  {source: "Microsoft", target: "Barnes & Noble", type: "suit"},
-  
-];
+// var links = [
+//   {source: "Josh Hurt", target: "Amazon", type: "licensing"},
+//   {source: "Josh Hurt", target: "HTC", type: "licensing"},
+//   {source: "Samsung", target: "Apple", type: "suit"},
+//   {source: "Motorola", target: "Apple", type: "suit"},
+//   {source: "Nokia", target: "Apple", type: "resolved"},
+//   {source: "HTC", target: "Apple", type: "suit"},
+//   {source: "Kodak", target: "Apple", type: "suit"},
+//   {source: "Microsoft", target: "Barnes & Noble", type: "suit"},
+//
+// ];
+var links = data['data']
 
 var nodes = {};
 
@@ -62,8 +63,8 @@ links.forEach(function(link) {
   link.target = nodes[link.target] || (nodes[link.target] = {name: link.target});
 });
 
-var width = 960,
-    height = 500;
+var width = 1920,
+    height = 1080;
 
 var force = d3.layout.force()
     .nodes(d3.values(nodes))

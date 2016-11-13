@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask,render_template,jsonify
 
 # print a nice greeting.
 def say_hello(username = "World"):
@@ -25,7 +25,14 @@ application = Flask(__name__)
 
 @application.route('/')
 def index():
-    return header_text + say_hello() + information + footer_text
+    return render_template('index.html')
+
+@application.route('/data')
+def get_data():
+    import json
+    with open ('facebook_graph.json','r') as f:
+        return jsonify(json.load(f))
+
 
 
 # add a rule when the page is accessed with a name appended to the site

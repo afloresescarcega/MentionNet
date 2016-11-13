@@ -1,37 +1,45 @@
-from pprint import pprint
-graph = {}
+'''
+The main PageRank algorithm started here
+'''
 
-nodeA = {
-    'name':'A',
-    'id':0,
-    'score':0.0,
-    'edgeOut':[],
-    'edgeIn':[]
-}
+class PageRank:
+    def __init__(self,graph):
+        '''
+        PageRank accepts the graph with the form following:
+        graph = {
+            'nodeA':nodeA,
+            'nodeB':nodeB,
+            ...
+            'nodeN':nodeN
+        }
+        '''
+        self.graph = graph
+        self.ALPHA = 0.15
 
-nodeB = {
-    'name':'B',
-    'id':1,
-    'score':0.0,
-    'edgeOut':[],
-    'edgeIn':[]
-}
+    def runPageRank(self):
+        s = len(self.graph)
+        self.rankSource = self.ALPHA / s
 
-def addNode(a):
-    if a['name'] not in graph:
-        graph[a['name']] = a
+        for page in self.graph:
+            self.graph[page]['pageRankScore'] = 1 / s
 
+        '''
+        Iteration
+        '''
+        for i in range(50):
+            for eachPage in self.graph:
+                incomingScore = 0
+                for incomingNode in self.graph[eachPage]['edgeIn']:
+                    assert(incomingNode in self.graph)
 
-def addEdge(a,b):
-    '''
-    a -> b
-    '''
-    a['edgeOut'].append(b['name'])
-    b['edgeIn'].append(a['name'])
+                    incomingScore += ((self.graph[incomingNode]['pageRankScore']) / len(self.graph[incomingNode]['edgeOut']))
+                self.graph[eachPage]['tempPageRankScore'] = (1 - self.ALPHA) * incomingScore + self.rankSource
 
-addEdge(nodeA,nodeB)
-addNode(nodeA)
-addNode(nodeB)
-# graph[nodeA['name']] = nodeA
-# graph[nodeB['name']] = nodeB
-pprint(graph)
+                c = 1
+                tempSum = 0
+                for eachPage in self.graph:
+                    tempSum += self.graph[eachPage]['tempPageRankScore']
+                c /= tempSum
+
+                for eachPage in self.graph:
+                    self.graph[eachPage]['pageRankScore'] = c * self.graph[eachPage]['tempPageRankScore']

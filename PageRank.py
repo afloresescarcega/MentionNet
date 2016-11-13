@@ -26,7 +26,7 @@ class PageRank:
         '''
         Iteration
         '''
-        for i in range(50):
+        for i in range(100):
             for eachPage in self.graph:
                 incomingScore = 0
                 for incomingNode in self.graph[eachPage]['edgeIn']:

@@ -38,7 +38,7 @@ def connect_facebook_user(Facebook_Graph_API):
     member_dict = {}
 
     #Get the feed from the Facebook Graph API
-    feeds = Facebook_Graph_API.get_object(id=fb_group+ '/feed', fields='from,message_tags,message,created_time,comments{from,message_tags,comments{from,message_tags}}',limit=100)
+    feeds = Facebook_Graph_API.get_object(id=fb_group+ '/feed', fields='from,message_tags,message,created_time,comments{from,message_tags,comments{from,message_tags}}',limit=150)
 
     for feed in feeds['data']:
         #Get the feed author_name
@@ -156,7 +156,7 @@ def connect_facebook_user(Facebook_Graph_API):
         next_link = feeds["paging"]["next"]
         next_link = next_link.split("/")[-1]
         next_call = fb_group + "/" + next_link
-        feeds = Facebook_Graph_API.get_object(next_call,limit=100)
+        feeds = Facebook_Graph_API.get_object(next_call,limit=150)
 
         for feed in feeds['data']:
             #Get the feed author_name
@@ -217,7 +217,7 @@ def connect_facebook_user(Facebook_Graph_API):
                                 if humans["type"] == "user":
                                     mentionedHumans.append((humans["id"],humans["name"]))
                             except KeyError:
-                                pp("Fuck it! We don't care, Facebook should fix this")
+                                pp("Facebook has an error on one of the data we don't care for now")
 
                     # if len(mentionedHumans) != 0:
                     #     print("comment")
@@ -255,26 +255,22 @@ def connect_facebook_user(Facebook_Graph_API):
                                     if humans["type"] == "user":
                                         mentionedHumans.append((humans["id"],humans["name"]))
 
-    for node in member_dict:
-        if len(member_dict[node].edgeIn) > 1 or len(member_dict[node].edgeIn) > 1:
-            pp("-----------------")
-            pp(member_dict[node].name)
-            pp("edgeOut")
-            pp(member_dict[node].edgeOut)
-            pp("edgeIn")
-            pp(member_dict[node].edgeIn)
-            pp("-----------------")
-            print()
-        # pp(member_dict[node].name)
-    pp(len(member_dict))
-    filtered_dic = {k:v for k,v in member_dict.items() if len(v.edgeIn) > 0 or len(v.edgeOut) > 0}
-    pp(len(filtered_dic))
+    # for node in member_dict:
+    #     if len(member_dict[node].edgeIn) > 1 or len(member_dict[node].edgeIn) > 1:
+    #         pp("-----------------")
+    #         pp(member_dict[node].name)
+    #         pp("edgeOut")
+    #         pp(member_dict[node].edgeOut)
+    #         pp("edgeIn")
+    #         pp(member_dict[node].edgeIn)
+    #         pp("-----------------")
+    #         print()
+    #     # pp(member_dict[node].name)
+    # pp(len(member_dict))
+    return {k:v for k,v in member_dict.items() if len(v.edgeIn) > 0 or len(v.edgeOut) > 0}
 
-
-
-
-
-
+def get_Facebook_Graph():
+    return connect_facebook_user(Facebook_Graph_API)
 
 
 def getMembers(Facebook_Graph_API):
@@ -300,20 +296,4 @@ def getMembers(Facebook_Graph_API):
         except Exception(e):
             print("didn't work")
 
-    print(len(membersList))
-
     return(membersList)
-
-def getMoreMembers(Facebook_Graph_API):
-    # getMembers(
-    pass
-# print("The following is a list of the members")
-# print(getMembers(Facebook_Graph_API))
-
-# listOfMembers = {}
-# listOfMembers = getMembers(Facebook_Graph_API) # list of str
-
-# memberObjects = {listOfMembers[i]:Node(listOfMembers[i]) for i in range(len(listOfMembers))}
-# memberObjects = [Node(listOfMembers[i]) for i in range(len(listOfMembers))]
-
-connect_facebook_user(Facebook_Graph_API)

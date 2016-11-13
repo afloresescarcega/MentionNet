@@ -38,7 +38,7 @@ def connect_facebook_user(Facebook_Graph_API):
     member_dict = {}
 
     #Get the feed from the Facebook Graph API
-    feeds = Facebook_Graph_API.get_object(id=fb_group+ '/feed', fields='from,message_tags,message,created_time,comments{from,message_tags}',limit=100)
+    feeds = Facebook_Graph_API.get_object(id=fb_group+ '/feed', fields='from,message_tags,message,created_time,comments{from,message_tags,comments{from,message_tags}}',limit=100)
 
     for feed in feeds['data']:
         #Get the feed author_name
@@ -58,11 +58,11 @@ def connect_facebook_user(Facebook_Graph_API):
                 if humans["type"] == "user":
                     mentionedHumans.append((humans["id"],humans["name"]))
 
-            if len(mentionedHumans) != 0:
-                print("author_name")
-                print(author_name + ": " + author_id)
-                print(author_name + " had mentioned")
-                print(mentionedHumans)
+            # if len(mentionedHumans) != 0:
+            #     print("author_name")
+            #     print(author_name + ": " + author_id)
+            #     print(author_name + " had mentioned")
+            #     print(mentionedHumans)
 
         #Insert the mentioned humans from the feed author to the member dict
         for mentioned_human in mentionedHumans:
@@ -98,10 +98,10 @@ def connect_facebook_user(Facebook_Graph_API):
                         if humans["type"] == "user":
                             mentionedHumans.append((humans["id"],humans["name"]))
 
-                if len(mentionedHumans) != 0:
-                    print("comment")
-                    print(author_name + ": " + author_id)
-                    print(mentionedHumans)
+                # if len(mentionedHumans) != 0:
+                #     print("comment")
+                #     print(author_name + ": " + author_id)
+                #     print(mentionedHumans)
 
                 #Insert the mentioned humans from the feed author to the member dict
                 for mentioned_human in mentionedHumans:
@@ -114,8 +114,45 @@ def connect_facebook_user(Facebook_Graph_API):
                     #Everyone of the humans whom the author mentioned will be recorded in the edgeOut
                     member_dict[author_id].add_edge_out(mentioned_human[0])
 
+                    if "comments" in comment:
+                        for sub_comment in comment["comments"]["data"]:
+                            #Get the comment author_name
+                            #Warning: Each of the comment is authorzied by differnt user
+                            author_name = sub_comment["from"]["name"]
+                            author_id = sub_comment["from"]["id"]
 
-    while "next" in feeds["paging"]:
+                            #Keep getting new members in the member_dict if they haven't existed in the dictionary yet
+                            if author_id not in member_dict:
+                                member_dict[author_id] = Node(author_id,author_name)
+
+                            '''
+                            Just like what we did in feed, but instead for comments
+                            '''
+                            mentionedHumans = []
+                            if "message_tags" in sub_comment:
+                                for humans in sub_comment["message_tags"]:
+                                    if humans["type"] == "user":
+                                        mentionedHumans.append((humans["id"],humans["name"]))
+
+                            # if len(mentionedHumans) != 0:
+                            #     print("comment")
+                            #     print(author_name + ": " + author_id)
+                            #     print(mentionedHumans)
+
+                            #Insert the mentioned humans from the feed author to the member dict
+                            for mentioned_human in mentionedHumans:
+                                if mentioned_human[0] not in member_dict:
+                                    member_dict[mentioned_human[0]] = Node(mentioned_human[0],mentioned_human[1])
+
+                                #Everyone of the humans who mentioned by the author will be recorded in the edgeIn
+                                member_dict[mentioned_human[0]].add_edge_in(author_id)
+
+                                #Everyone of the humans whom the author mentioned will be recorded in the edgeOut
+                                member_dict[author_id].add_edge_out(mentioned_human[0])
+
+
+
+    while "paging" in feeds:
         next_link = feeds["paging"]["next"]
         next_link = next_link.split("/")[-1]
         next_call = fb_group + "/" + next_link
@@ -139,11 +176,11 @@ def connect_facebook_user(Facebook_Graph_API):
                     if humans["type"] == "user":
                         mentionedHumans.append((humans["id"],humans["name"]))
 
-                if len(mentionedHumans) != 0:
-                    print("author_name")
-                    print(author_name + ": " + author_id)
-                    print(author_name + " had mentioned")
-                    print(mentionedHumans)
+                # if len(mentionedHumans) != 0:
+                #     print("author_name")
+                #     print(author_name + ": " + author_id)
+                #     print(author_name + " had mentioned")
+                #     print(mentionedHumans)
 
             #Insert the mentioned humans from the feed author to the member dict
             for mentioned_human in mentionedHumans:
@@ -182,10 +219,10 @@ def connect_facebook_user(Facebook_Graph_API):
                             except KeyError:
                                 pp("Fuck it! We don't care, Facebook should fix this")
 
-                    if len(mentionedHumans) != 0:
-                        print("comment")
-                        print(author_name + ": " + author_id)
-                        print(mentionedHumans)
+                    # if len(mentionedHumans) != 0:
+                    #     print("comment")
+                    #     print(author_name + ": " + author_id)
+                    #     print(mentionedHumans)
 
                     #Insert the mentioned humans from the feed author to the member dict
                     for mentioned_human in mentionedHumans:
@@ -198,8 +235,28 @@ def connect_facebook_user(Facebook_Graph_API):
                         #Everyone of the humans whom the author mentioned will be recorded in the edgeOut
                         member_dict[author_id].add_edge_out(mentioned_human[0])
 
+                    if "comments" in comment:
+                        for sub_comment in comment["comments"]["data"]:
+                            #Get the comment author_name
+                            #Warning: Each of the comment is authorzied by differnt user
+                            author_name = sub_comment["from"]["name"]
+                            author_id = sub_comment["from"]["id"]
+
+                            #Keep getting new members in the member_dict if they haven't existed in the dictionary yet
+                            if author_id not in member_dict:
+                                member_dict[author_id] = Node(author_id,author_name)
+
+                            '''
+                            Just like what we did in feed, but instead for comments
+                            '''
+                            mentionedHumans = []
+                            if "message_tags" in sub_comment:
+                                for humans in sub_comment["message_tags"]:
+                                    if humans["type"] == "user":
+                                        mentionedHumans.append((humans["id"],humans["name"]))
+
     for node in member_dict:
-        if len(member_dict[node].edgeIn) > 1:
+        if len(member_dict[node].edgeIn) > 1 or len(member_dict[node].edgeIn) > 1:
             pp("-----------------")
             pp(member_dict[node].name)
             pp("edgeOut")
@@ -209,6 +266,9 @@ def connect_facebook_user(Facebook_Graph_API):
             pp("-----------------")
             print()
         # pp(member_dict[node].name)
+    pp(len(member_dict))
+    filtered_dic = {k:v for k,v in member_dict.items() if len(v.edgeIn) > 0 or len(v.edgeOut) > 0}
+    pp(len(filtered_dic))
 
 
 

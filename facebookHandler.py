@@ -1,122 +1,226 @@
 import facebook
-import pprint
-
-tokenFile = open("token.txt")
-
-# printi priner
-pp = pprint.PrettyPrinter(indent=4)
+from pprint import pprint as pp
 
 def getToken(_tokenFile):
     for line in _tokenFile: # change later; just gets the access token from file for privacy
         return line
+tokenFile = open("token.txt")
 
 tokenStr = getToken(tokenFile)
 
-graph = facebook.GraphAPI(access_token=tokenStr, version='2.8')
+class Node:
+    def __init__(self, name_id,name):
+        self.name = name
+        self.name_id = name_id
+        self.pageRankScore = 0.0
+        self.tempPageRankScore = 0.0
+        self.edgeOut = set()
+        self.edgeIn = set()
 
+    def add_edge_out(self, ref_id):
+        self.edgeOut.add(ref_id)
 
-fb_group = '155607091223285' # utcs fb page
-# events = graph.get_object(id=fb_group+ '/feed', fields='from,message_tags,comments{from,message_tags}')
+    def add_edge_in(self, ref_id):
+        self.edgeIn.add(ref_id)
 
-#for fb_element in events["data"]:
-    #print("\n\nThis is an element ")
-    #pp.pprint(fb_element)
-def connect_facebook_user(graph):
+    def __str__(self):
+        return "My name is name"+ self.name
+
+Facebook_Graph_API = facebook.GraphAPI(access_token=tokenStr, version='2.8')
+
+# UTCS Facebook page ID
+fb_group = '155607091223285'
+
+def connect_facebook_user(Facebook_Graph_API):
+    '''
+    Construct the Facebook network graph in the UTCS group
+    '''
     member_dict = {}
-    '''
-    Connect all the users to users who mentioned to each other,
-    update the edge based on the feeds fetched from get_object 
-    '''
 
     #Get the feed from the Facebook Graph API
-    listOfPosts = graph.get_object(id=fb_group+ '/feed', fields='from,message_tags,message,created_time,comments{from,message_tags}',limit=100)
-    # print("These are people")
-    # 
-    for feed in listOfPosts['data']:
-        #Get the feed author
-        author = feed["from"]["name"]
+    feeds = Facebook_Graph_API.get_object(id=fb_group+ '/feed', fields='from,message_tags,message,created_time,comments{from,message_tags}',limit=100)
+
+    for feed in feeds['data']:
+        #Get the feed author_name
+        author_name = feed["from"]["name"]
         author_id = feed["from"]["id"]
-        
+
+        #Keep getting new members in the member_dict if they haven't existed in the dictionary yet
+        if author_id not in member_dict:
+            member_dict[author_id] = Node(author_id,author_name)
+
         mentionedHumans = []
         if "message_tags" in feed:
+            '''
+            Prepare to construct outlinks from the given author
+            '''
             for humans in feed["message_tags"]:
                 if humans["type"] == "user":
-                    
-                    mentionedHumans.append(humans["name"] )
-            if len(mentionedHumans) != 0:
-                print("author")
-                print(author + ": " + author_id)
-                print(mentionedHumans)
-        
+                    mentionedHumans.append((humans["id"],humans["name"]))
 
-        
-        if "comments" in feed:       
+            if len(mentionedHumans) != 0:
+                print("author_name")
+                print(author_name + ": " + author_id)
+                print(author_name + " had mentioned")
+                print(mentionedHumans)
+
+        #Insert the mentioned humans from the feed author to the member dict
+        for mentioned_human in mentionedHumans:
+            if mentioned_human[0] not in member_dict:
+                member_dict[mentioned_human[0]] = Node(mentioned_human[0],mentioned_human[1])
+
+            #Everyone of the humans who mentioned by the author will be recorded in the edgeIn
+            member_dict[mentioned_human[0]].add_edge_in(author_id)
+
+            #Everyone of the humans whom the author mentioned will be recorded in the edgeOut
+            member_dict[author_id].add_edge_out(mentioned_human[0])
+
+        '''
+        Only deal with mentioning on layer of the comment for each feed
+        '''
+        if "comments" in feed:
             for comment in feed["comments"]["data"]:
-                #Get the comment author
-                author = comment["from"]["name"]
+                #Get the comment author_name
+                #Warning: Each of the comment is authorzied by differnt user
+                author_name = comment["from"]["name"]
                 author_id = comment["from"]["id"]
-                
+
+                #Keep getting new members in the member_dict if they haven't existed in the dictionary yet
+                if author_id not in member_dict:
+                    member_dict[author_id] = Node(author_id,author_name)
+
+                '''
+                Just like what we did in feed, but instead for comments
+                '''
                 mentionedHumans = []
                 if "message_tags" in comment:
                     for humans in comment["message_tags"]:
                         if humans["type"] == "user":
-                            mentionedHumans.append(humans["name"] )
+                            mentionedHumans.append((humans["id"],humans["name"]))
+
                 if len(mentionedHumans) != 0:
                     print("comment")
-                    print(author + ": " + author_id)
+                    print(author_name + ": " + author_id)
                     print(mentionedHumans)
-        
-    
-    while "next" in listOfPosts["paging"]:
-        next_link = listOfPosts["paging"]["next"]
+
+                #Insert the mentioned humans from the feed author to the member dict
+                for mentioned_human in mentionedHumans:
+                    if mentioned_human[0] not in member_dict:
+                        member_dict[mentioned_human[0]] = Node(mentioned_human[0],mentioned_human[1])
+
+                    #Everyone of the humans who mentioned by the author will be recorded in the edgeIn
+                    member_dict[mentioned_human[0]].add_edge_in(author_id)
+
+                    #Everyone of the humans whom the author mentioned will be recorded in the edgeOut
+                    member_dict[author_id].add_edge_out(mentioned_human[0])
+
+
+    while "next" in feeds["paging"]:
+        next_link = feeds["paging"]["next"]
         next_link = next_link.split("/")[-1]
         next_call = fb_group + "/" + next_link
-        listOfPosts = graph.get_object(next_call,limit=100)
+        feeds = Facebook_Graph_API.get_object(next_call,limit=100)
 
-        for feed in listOfPosts['data']:
-                #Get the feed author
-                author = feed["from"]["name"]
-                
-                mentionedHumans = []
-                if "message_tags" in feed:
-                    for humans in feed["message_tags"]:
-                        if humans["type"] == "user":
-                            mentionedHumans.append(humans["name"] )
+        for feed in feeds['data']:
+            #Get the feed author_name
+            author_name = feed["from"]["name"]
+            author_id = feed["from"]["id"]
+
+            #Keep getting new members in the member_dict if they haven't existed in the dictionary yet
+            if author_id not in member_dict:
+                member_dict[author_id] = Node(author_id,author_name)
+
+            mentionedHumans = []
+            if "message_tags" in feed:
+                '''
+                Prepare to construct outlinks from the given author
+                '''
+                for humans in feed["message_tags"]:
+                    if humans["type"] == "user":
+                        mentionedHumans.append((humans["id"],humans["name"]))
+
                 if len(mentionedHumans) != 0:
-                    print("author")
-                    print(author)
+                    print("author_name")
+                    print(author_name + ": " + author_id)
+                    print(author_name + " had mentioned")
                     print(mentionedHumans)
-                
-                if "comments" in feed:       
-                    for comment in feed["comments"]["data"]:
-                        #Get the comment author
-                        author = comment["from"]["name"]
-                        
-                        mentionedHumans = []
-                        if "message_tags" in comment:
-                            for humans in comment["message_tags"]:
-                                try:
-                                    if humans["type"] == "user":
-                                        mentionedHumans.append(humans["name"] )
-                                except KeyError:
-                                    print("BING!!!!!!!!!!")
-                        if len(mentionedHumans) != 0:
-                            print("comment")
-                            print(author)
-                            print(mentionedHumans)
-        
-        
-        
-    
 
-    
+            #Insert the mentioned humans from the feed author to the member dict
+            for mentioned_human in mentionedHumans:
+                if mentioned_human[0] not in member_dict:
+                    member_dict[mentioned_human[0]] = Node(mentioned_human[0],mentioned_human[1])
 
- 
+                #Everyone of the humans who mentioned by the author will be recorded in the edgeIn
+                member_dict[mentioned_human[0]].add_edge_in(author_id)
 
-def getMembers(graph):
+                #Everyone of the humans whom the author mentioned will be recorded in the edgeOut
+                member_dict[author_id].add_edge_out(mentioned_human[0])
+
+            '''
+            Only deal with mentioning on layer of the comment for each feed
+            '''
+            if "comments" in feed:
+                for comment in feed["comments"]["data"]:
+                    #Get the comment author_name
+                    #Warning: Each of the comment is authorzied by differnt user
+                    author_name = comment["from"]["name"]
+                    author_id = comment["from"]["id"]
+
+                    #Keep getting new members in the member_dict if they haven't existed in the dictionary yet
+                    if author_id not in member_dict:
+                        member_dict[author_id] = Node(author_id,author_name)
+
+                    '''
+                    Just like what we did in feed, but instead for comments
+                    '''
+                    mentionedHumans = []
+                    if "message_tags" in comment:
+                        for humans in comment["message_tags"]:
+                            try:
+                                if humans["type"] == "user":
+                                    mentionedHumans.append((humans["id"],humans["name"]))
+                            except KeyError:
+                                pp("Fuck it! We don't care, Facebook should fix this")
+
+                    if len(mentionedHumans) != 0:
+                        print("comment")
+                        print(author_name + ": " + author_id)
+                        print(mentionedHumans)
+
+                    #Insert the mentioned humans from the feed author to the member dict
+                    for mentioned_human in mentionedHumans:
+                        if mentioned_human[0] not in member_dict:
+                            member_dict[mentioned_human[0]] = Node(mentioned_human[0],mentioned_human[1])
+
+                        #Everyone of the humans who mentioned by the author will be recorded in the edgeIn
+                        member_dict[mentioned_human[0]].add_edge_in(author_id)
+
+                        #Everyone of the humans whom the author mentioned will be recorded in the edgeOut
+                        member_dict[author_id].add_edge_out(mentioned_human[0])
+
+    for node in member_dict:
+        if len(member_dict[node].edgeIn) > 1:
+            pp("-----------------")
+            pp(member_dict[node].name)
+            pp("edgeOut")
+            pp(member_dict[node].edgeOut)
+            pp("edgeIn")
+            pp(member_dict[node].edgeIn)
+            pp("-----------------")
+            print()
+        # pp(member_dict[node].name)
+
+
+
+
+
+
+
+
+def getMembers(Facebook_Graph_API):
     membersList = []
-    members = graph.get_object(fb_group + "/members",limit=2000,after="")
-    
+    members = Facebook_Graph_API.get_object(fb_group + "/members",limit=2000,after="")
+
 
 
     for user in members["data"]:
@@ -124,11 +228,11 @@ def getMembers(graph):
             membersList.append(user["name"])
         except Exception(e):
             print("didn't work")
-    
+
     #Check whether it has more members
     while "next" in members["paging"]:
        after = members["paging"]["cursors"]["after"]
-       members = graph.get_object(fb_group + "/members",limit=2000,after=after)
+       members = Facebook_Graph_API.get_object(fb_group + "/members",limit=2000,after=after)
 
        for user in members["data"]:
         try:
@@ -140,41 +244,16 @@ def getMembers(graph):
 
     return(membersList)
 
-def getMoreMembers(graph):
+def getMoreMembers(Facebook_Graph_API):
     # getMembers(
     pass
 # print("The following is a list of the members")
-# print(getMembers(graph))
-
-class Node:
-
-    def __init__(self, name):
-        self._name = name
-        self.nodeId = ""
-        self.pageRankScore = 0.0
-        self.tempPageRankScore = 0.0
-        self.edgeOut = []
-        self.edgeIn = []
-
-
-    def addOutgoingRef(self, refName):
-        if not isRefExists(edgeOut, refName):
-            self.edgeOut.append(refName)
-
-    def addIncomingRef(self, refName):
-        if not isRefExists(edgeIn, refName):
-            self.edgeIn.append(refName)
-
-    
-    def isRefExists(self, edge, refName):
-        return refName in edge
-    def __str__(self):
-        return "My name is name"+ self.name
+# print(getMembers(Facebook_Graph_API))
 
 # listOfMembers = {}
-# listOfMembers = getMembers(graph) # list of str
+# listOfMembers = getMembers(Facebook_Graph_API) # list of str
 
 # memberObjects = {listOfMembers[i]:Node(listOfMembers[i]) for i in range(len(listOfMembers))}
 # memberObjects = [Node(listOfMembers[i]) for i in range(len(listOfMembers))]
 
-connect_facebook_user(graph)
+connect_facebook_user(Facebook_Graph_API)

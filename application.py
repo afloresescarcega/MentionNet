@@ -18,8 +18,13 @@ footer_text = '</body>\n</html>'
 application = Flask(__name__)
 
 # add a rule for the index page.
-application.add_url_rule('/', 'index', (lambda: header_text +
-    say_hello() + instructions + footer_text))
+# application.add_url_rule('/', 'index', (lambda: header_text +
+#     say_hello() + instructions + footer_text))
+
+@application.route('/')
+def index():
+    return header_text + say_hello() + instructions + footer_text
+
 
 # add a rule when the page is accessed with a name appended to the site
 # URL.

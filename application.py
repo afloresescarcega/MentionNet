@@ -14,6 +14,8 @@ instructions = '''
 home_link = '<p><a href="/">Back</a></p>\n'
 footer_text = '</body>\n</html>'
 
+information = '<p>Facebook Data:</p>'
+
 # EB looks for an 'application' callable by default.
 application = Flask(__name__)
 
@@ -23,7 +25,7 @@ application = Flask(__name__)
 
 @application.route('/')
 def index():
-    return header_text + say_hello() + instructions + footer_text
+    return header_text + say_hello() + information + footer_text
 
 
 # add a rule when the page is accessed with a name appended to the site

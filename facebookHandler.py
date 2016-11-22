@@ -28,8 +28,61 @@ class Node:
 
 Facebook_Graph_API = facebook.GraphAPI(access_token=tokenStr, version='2.8')
 
+
 # UTCS Facebook page ID
 fb_group = '155607091223285'
+
+#This method only process the feed
+def scrap_facebook_user_mention_helper(feed,member_dict):
+    '''
+    dfs
+    '''
+    for feed in feed["data"]:        
+        author_name,author_id = feed["from"]["name"], feed["from"]["id"]    
+
+        if author_id not in member_dict:
+            member_dict[author_id] = Node(author_id,author_name)    
+
+        if "message_tags" in feed:            
+            mentionedHumans = [(humans["id"],humans["name"]) for humans in feed["message_tags"] if "type" in humans and humans["type"] == "user"]            
+            for mentioned_human in mentionedHumans:
+                if mentioned_human[0] not in member_dict:
+                    member_dict[mentioned_human[0]] = Node(mentioned_human[0],mentioned_human[1])
+                #Everyone of the humans who mentioned by the author will be recorded in the edgeIn
+                member_dict[mentioned_human[0]].add_edge_in(author_id)
+
+                #Everyone of the humans whom the author mentioned will be recorded in the edgeOut
+                member_dict[author_id].add_edge_out(mentioned_human[0])
+
+        if "comments" in feed:
+            scrap_facebook_user_mention_helper(feed["comments"],member_dict)
+
+
+#This method only process whether the given feed has paging or not
+def scrap_facebook_user_mention(Facebook_Graph_API,limit,limit2=150):    
+    member_dict = {}
+
+    #Get the feed from the Facebook Graph API
+    feeds = Facebook_Graph_API.get_object(id=fb_group+ '/feed', fields='from,message_tags,message,created_time,comments{from,message_tags,comments{from,message_tags}}',limit=limit)
+    scrap_facebook_user_mention_helper(feeds,member_dict)
+
+    while "paging" in feeds:        
+        next_call = fb_group + "/" + feeds["paging"]["next"].split("/")[-1]        
+        feeds = Facebook_Graph_API.get_object(next_call,limit=limit2)
+        scrap_facebook_user_mention_helper(feeds,member_dict)
+
+    return {k:v for k,v in member_dict.items() if len(v.edgeIn) > 0 or len(v.edgeOut) > 0}        
+
+a = scrap_facebook_user_mention(Facebook_Graph_API,30,30)
+# b = scrap_facebook_user_mention(Facebook_Graph_API,40,40)
+# diff_set = (set(a) ^ set(b))
+# for i in diff_set:
+#     pp(i)
+#     if i not in a:
+#         pp(b[i].edgeOut)
+#     else:
+#         pp(a[i].edgeOut)
+
 
 def connect_facebook_user(Facebook_Graph_API):
     '''
@@ -269,8 +322,10 @@ def connect_facebook_user(Facebook_Graph_API):
     # pp(len(member_dict))
     return {k:v for k,v in member_dict.items() if len(v.edgeIn) > 0 or len(v.edgeOut) > 0}
 
+
+
 def get_Facebook_Graph():
-    return connect_facebook_user(Facebook_Graph_API)
+    return scrap_facebook_user_mention(Facebook_Graph_API)
 
 
 def getMembers(Facebook_Graph_API):

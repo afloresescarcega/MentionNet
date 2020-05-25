@@ -110,3 +110,4 @@ ENV/
 
 # Mac unecessery
 .DS_Store
+node_modules/

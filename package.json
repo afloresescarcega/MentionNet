@@ -1,0 +1,28 @@
+{
+  "name": "mentionnet",
+  "version": "1.0.0",
+  "description": "Allows Facebook users to visualize (D3.js) user influence as ranked by PageRank. ",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/afloresescarcega/MentionNet.git"
+  },
+  "keywords": [
+    "visualization",
+    "facebook-graph-api",
+    "d3js",
+    "express"
+  ],
+  "author": "killvung, afloresescarcega",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/afloresescarcega/MentionNet/issues"
+  },
+  "homepage": "https://github.com/afloresescarcega/MentionNet#readme",
+  "dependencies": {
+    "express": "^4.17.1"
+  }
+}

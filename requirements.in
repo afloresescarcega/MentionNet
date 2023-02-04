@@ -1,0 +1,8 @@
+build
+click
+MarkupSafe
+packaging
+pip-tools
+pyproject_hooks
+tomli
+Werkzeug

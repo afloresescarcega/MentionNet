@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>MentionNet</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; background: #f4f5f7; color: #1c1e21; }
+  header { height: 56px; background: #3b5998; color: #fff; display: flex; align-items: center; padding: 0 24px; gap: 16px; }
+  header h1 { font-size: 20px; margin: 0; font-weight: 700; letter-spacing: .2px; }
+  header .group { margin-left: auto; background: rgba(255,255,255,.15); padding: 6px 12px; border-radius: 6px; font-size: 13px; }
+  main { display: grid; grid-template-columns: 1fr 320px; gap: 16px; padding: 16px; height: calc(100vh - 56px); }
+  .card { background: #fff; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.12); overflow: hidden; }
+  .graph { position: relative; }
+  .graph .title { position: absolute; top: 12px; left: 16px; font-size: 13px; color: #606770; }
+  .legend { position: absolute; bottom: 12px; left: 16px; font-size: 12px; color: #606770; display: flex; gap: 16px; align-items: center; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+  svg { width: 100%; height: 100%; display: block; }
+  .link { stroke: #b8c2d6; stroke-opacity: .7; }
+  .node circle { stroke: #fff; stroke-width: 1.5px; }
+  .node text { font-size: 11px; fill: #1c1e21; pointer-events: none; paint-order: stroke; stroke: #fff; stroke-width: 3px; }
+  .side { display: flex; flex-direction: column; gap: 16px; }
+  .side .card { padding: 16px; }
+  .side h2 { font-size: 14px; margin: 0 0 12px; color: #606770; text-transform: uppercase; letter-spacing: .6px; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; }
+  .stats b { display: block; font-size: 22px; color: #3b5998; }
+  .stats span { font-size: 12px; color: #606770; }
+  ol { margin: 0; padding: 0; list-style: none; }
+  li { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid #eef0f3; font-size: 14px; }
+  li:last-child { border-bottom: 0; }
+  li .rank { width: 18px; color: #8d949e; font-weight: 600; font-size: 13px; }
+  li .avatar { width: 28px; height: 28px; border-radius: 50%; color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  li .name { flex: 1; }
+  li .bar { width: 70px; height: 6px; background: #eef0f3; border-radius: 3px; overflow: hidden; }
+  li .bar div { height: 100%; background: #3b5998; }
+  li .score { width: 48px; text-align: right; font-variant-numeric: tabular-nums; color: #606770; font-size: 12px; }
+  .banner { font-size: 11px; color: #8d949e; text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <h1>MentionNet</h1>
+  <span style="opacity:.8;font-size:13px">Who really drives the conversation?</span>
+  <div class="group">Group: UT Hackers (mock data)</div>
+</header>
+<main>
+  <div class="card graph">
+    <div class="title">Mention / reply graph &middot; node size = PageRank</div>
+    <svg id="g"></svg>
+    <div class="legend"><span><i style="background:#3b5998"></i>Top 5 influencers</span><span><i style="background:#8b9dc3"></i>Members</span><span>edge = A replied to / mentioned B</span></div>
+  </div>
+  <div class="side">
+    <div class="card"><h2>Group snapshot</h2><div class="stats" id="stats"></div></div>
+    <div class="card" style="flex:1"><h2>PageRank leaderboard</h2><ol id="lb"></ol></div>
+    <div class="banner">Simulated UI &middot; fictional names &middot; the Facebook Groups API this used is gone</div>
+  </div>
+</main>
+<script src="../../static/js/d3.v4.min.js"></script>
+<script>
+// Deterministic PRNG so the screenshot is reproducible
+let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const names = ["Maya Chen","Diego Ramirez","Priya Natarajan","Jordan Lee","Sam Okafor","Elena Petrova","Marcus Hill","Aiko Tanaka","Noah Brooks","Fatima Zahra","Liam O'Connor","Sofia Rossi","Ethan Park","Grace Kim","Omar Haddad","Chloe Martin","Raj Patel","Hannah Weber","Lucas Silva","Zoe Nguyen","Isaac Cohen","Nina Ivanova","Theo Dubois","Ava Johnson","Kenji Mori","Leah Adler","Mateo Garcia","Ruby Clarke","Yusuf Demir","Ivy Thompson","Ben Carter","Mia Fischer","Arjun Rao","Lily Evans","Felix Wagner","Sara Lind"];
+const N = names.length;
+const hubs = [0, 1, 2, 3, 4]; // a few people everyone replies to
+const edges = new Set();
+for (let i = 0; i < N; i++) {
+  const k = 1 + Math.floor(rnd() * 3);
+  for (let j = 0; j < k; j++) {
+    const t = rnd() < 0.55 ? hubs[Math.floor(rnd() * hubs.length)] : Math.floor(rnd() * N);
+    if (t !== i) edges.add(i + ">" + t);
+  }
+}
+const links = [...edges].map(e => { const [s, t] = e.split(">").map(Number); return { source: s, target: t }; });
+
+// PageRank (same algorithm as PageRank.py, d = 0.85)
+let pr = Array(N).fill(1 / N);
+const out = Array(N).fill(0); links.forEach(l => out[l.source]++);
+for (let it = 0; it < 50; it++) {
+  const nx = Array(N).fill((1 - 0.85) / N);
+  links.forEach(l => nx[l.target] += 0.85 * pr[l.source] / out[l.source]);
+  const dangling = pr.reduce((a, p, i) => a + (out[i] ? 0 : p), 0);
+  pr = nx.map(v => v + 0.85 * dangling / N);
+}
+const nodes = names.map((n, i) => ({ id: i, name: n, pr: pr[i] }));
+const order = [...nodes].sort((a, b) => b.pr - a.pr);
+const topIds = new Set(order.slice(0, 5).map(n => n.id));
+const r = d3.scaleSqrt().domain(d3.extent(pr)).range([6, 26]);
+
+const svg = d3.select("#g"), box = svg.node().getBoundingClientRect();
+const W = box.width, H = box.height;
+svg.append("defs").append("marker").attr("id", "arrow").attr("viewBox", "0 -4 8 8").attr("refX", 8).attr("markerWidth", 6).attr("markerHeight", 6).attr("orient", "auto")
+  .append("path").attr("d", "M0,-4L8,0L0,4").attr("fill", "#b8c2d6");
+const sim = d3.forceSimulation(nodes)
+  .force("link", d3.forceLink(links).id(d => d.id).distance(90))
+  .force("charge", d3.forceManyBody().strength(-260))
+  .force("center", d3.forceCenter(W / 2, H / 2 + 10))
+  .force("collide", d3.forceCollide(d => r(d.pr) + 4))
+  .stop();
+for (let i = 0; i < 400; i++) sim.tick();
+nodes.forEach(d => { d.x = Math.max(40, Math.min(W - 40, d.x)); d.y = Math.max(50, Math.min(H - 50, d.y)); });
+
+svg.selectAll(".link").data(links).enter().append("line").attr("class", "link").attr("marker-end", "url(#arrow)")
+  .each(function (l) {
+    const dx = l.target.x - l.source.x, dy = l.target.y - l.source.y, d = Math.hypot(dx, dy) || 1, rt = r(l.target.pr) + 2;
+    d3.select(this).attr("x1", l.source.x).attr("y1", l.source.y).attr("x2", l.target.x - dx / d * rt).attr("y2", l.target.y - dy / d * rt);
+  });
+const g = svg.selectAll(".node").data(nodes).enter().append("g").attr("class", "node").attr("transform", d => `translate(${d.x},${d.y})`);
+g.append("circle").attr("r", d => r(d.pr)).attr("fill", d => topIds.has(d.id) ? "#3b5998" : "#8b9dc3");
+g.append("text").attr("dy", d => r(d.pr) + 13).attr("text-anchor", "middle").style("font-weight", d => topIds.has(d.id) ? 700 : 400).text(d => d.name);
+
+const colors = ["#3b5998", "#e9573f", "#3bafda", "#8cc152", "#967adc", "#f6bb42", "#d770ad", "#37bc9b"];
+document.getElementById("stats").innerHTML =
+  `<div><b>${N}</b><span>members</span></div><div><b>${links.length}</b><span>mentions</span></div><div><b>412</b><span>posts</span></div>`;
+const max = order[0].pr;
+document.getElementById("lb").innerHTML = order.slice(0, 10).map((n, i) =>
+  `<li><span class="rank">${i + 1}</span><span class="avatar" style="background:${colors[n.id % colors.length]}">${n.name.split(" ").map(s => s[0]).join("")}</span>` +
+  `<span class="name">${n.name}</span><span class="bar"><div style="width:${(n.pr / max * 100).toFixed(0)}%"></div></span><span class="score">${n.pr.toFixed(3)}</span></li>`).join("");
+</script>
+</body>
+</html>
